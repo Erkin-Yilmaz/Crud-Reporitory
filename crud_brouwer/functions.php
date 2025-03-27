@@ -1,202 +1,114 @@
 <?php
-// auteur: Vul hier je naam in
+// auteur: Erkin Yilmaz
 // functie: algemene functies tbv hergebruik
 
 include_once "config.php";
 
- function connectDb(){
+function connectDb() {
     $servername = SERVERNAME;
     $username = USERNAME;
     $password = PASSWORD;
     $dbname = DATABASE;
-   
+
     try {
         $conn = new PDO("mysql:host=$servername;dbname=$dbname", $username, $password);
-        // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        //echo "Connected successfully";
         return $conn;
-    } 
-    catch(PDOException $e) {
+    } catch (PDOException $e) {
         echo "Connection failed: " . $e->getMessage();
     }
+}
 
- }
-
- function crudMain(){
-
-    // Menu-item   insert
-    $txt = "
-    <h1>Crud brouwers</h1>
+function crudMain() {
+    echo "
+    <h1>Crud Brouwers</h1>
     <nav>
-		<a href='insert.php'>Toevoegen nieuwe brouwer</a>
+        <a href='insert.php'>Toevoegen nieuwe brouwer</a>
     </nav><br>";
-    echo $txt;
 
-    // Haal alle fietsen record uit de tabel 
     $result = getData(CRUD_TABLE);
-
-    //print table
     printCrudTabel($result);
-    
- }
+}
 
- // selecteer de data uit de opgeven table
- function getData($table){
-    // Connect database
+function getData($table) {
     $conn = connectDb();
-
-    // Select data uit de opgegeven table methode query
-    // query: is een prepare en execute in 1 zonder placeholders
-    // $result = $conn->query("SELECT * FROM $table")->fetchAll();
-
-    // Select data uit de opgegeven table methode prepare
     $sql = "SELECT * FROM $table";
     $query = $conn->prepare($sql);
     $query->execute();
-    $result = $query->fetchAll();
+    return $query->fetchAll();
+}
 
-    return $result;
- }
-
- // selecteer de rij van de opgeven id uit de table fietsen
- function getRecord($id){
-    // Connect database
+function getRecord($id) {
     $conn = connectDb();
-
-    // Select data uit de opgegeven table methode prepare
     $sql = "SELECT * FROM " . CRUD_TABLE . " WHERE brouwcode = :id";
     $query = $conn->prepare($sql);
-    $query->execute([':id'=>$id]);
-    $result = $query->fetch();
+    $query->execute([':id' => $id]);
+    return $query->fetch();
+}
 
-    return $result;
- }
-
-
-// Function 'printCrudTabel' print een HTML-table met data uit $result 
-// en een wzg- en -verwijder-knop.
-function printCrudTabel($result){
-    // Zet de hele table in een variable en print hem 1 keer 
+function printCrudTabel($result) {
     $table = "<table>";
-
-    // Print header table
-
-    // haal de kolommen uit de eerste rij [0] van het array $result mbv array_keys
     $headers = array_keys($result[0]);
     $table .= "<tr>";
-    foreach($headers as $header){
-        $table .= "<th>" . $header . "</th>";   
+    foreach ($headers as $header) {
+        $table .= "<th>" . $header . "</th>";
     }
-    // Voeg actie kopregel toe
     $table .= "<th colspan=2>Actie</th>";
-    $table .= "</th>";
+    $table .= "</tr>";
 
-    // print elke rij
     foreach ($result as $row) {
-        
         $table .= "<tr>";
-        // print elke kolom
         foreach ($row as $cell) {
-            $table .= "<td>" . $cell . "</td>";  
+            $table .= "<td>" . $cell . "</td>";
         }
-        
-        // Wijzig knopje
         $table .= "<td>
-            <form method='post' action='update.php?id=$row[id]' >       
-                <button>Wzg</button>	 
-            </form></td>";
-
-        // Delete knopje
+            <form method='post' action='update.php?id=$row[brouwcode]'>
+                <button>Wijzig</button>
+            </form>
+        </td>";
         $table .= "<td>
-            <form method='post' action='delete.php?id=$row[id]' >       
-                <button>Verwijder</button>	 
-            </form></td>";
-
+            <form method='post' action='delete.php?id=$row[brouwcode]'>
+                <button>Verwijder</button>
+            </form>
+        </td>";
         $table .= "</tr>";
     }
-    $table.= "</table>";
-
+    $table .= "</table>";
     echo $table;
 }
 
-
-function updateRecord($row){
-
-    // Maak database connectie
+function updateRecord($row) {
     $conn = connectDb();
-
-    // Maak een query 
-    $sql = "UPDATE " . CRUD_TABLE .
-    " SET 
-        merk = :merk, 
-        type = :type, 
-        prijs = :prijs
-    WHERE id = :id
-    ";
-
-    // Prepare query
+    $sql = "UPDATE " . CRUD_TABLE . "
+    SET naam = :naam, land = :land
+    WHERE brouwcode = :brouwcode";
     $stmt = $conn->prepare($sql);
-    // Uitvoeren
     $stmt->execute([
-        ':merk'=>$row['merk'],
-        ':type'=>$row['type'],
-        ':prijs'=>$row['prijs'],
-        ':id'=>$row['id']
+        ':naam' => $row['naam'],
+        ':land' => $row['land'],
+        ':brouwcode' => $row['brouwcode']
     ]);
-
-    // test of database actie is gelukt
-    $retVal = ($stmt->rowCount() == 1) ? true : false ;
-    return $retVal;
+    return $stmt->rowCount() == 1;
 }
 
-function insertRecord($post){
-    // Maak database connectie
+function insertRecord($post) {
     $conn = connectDb();
-
-    // Maak een query 
-    $sql = "
-        INSERT INTO " . CRUD_TABLE . " (merk, type, prijs)
-        VALUES (:merk, :type, :prijs) 
-    ";
-
-    // Prepare query
+    $sql = "INSERT INTO " . CRUD_TABLE . " (naam, land)
+    VALUES (:naam, :land)";
     $stmt = $conn->prepare($sql);
-    // Uitvoeren
     $stmt->execute([
-        ':merk'=>$_POST['merk'],
-        ':type'=>$_POST['type'],
-        ':prijs'=>$_POST['prijs']
+        ':naam' => $post['naam'],
+        ':land' => $post['land']
     ]);
-
-    
-    // test of database actie is gelukt
-    $retVal = ($stmt->rowCount() == 1) ? true : false ;
-    return $retVal;  
+    return $stmt->rowCount() == 1;
 }
 
-function deleteRecord($id){
-
-    // Connect database
+function deleteRecord($id) {
     $conn = connectDb();
-    
-    // Maak een query 
-    $sql = "
-    DELETE FROM " . CRUD_TABLE . 
-    " WHERE id = :id";
-
-    // Prepare query
+    $sql = "DELETE FROM " . CRUD_TABLE . " WHERE brouwcode = :id";
     $stmt = $conn->prepare($sql);
-
-    // Uitvoeren
-    $stmt->execute([
-    ':id'=>$_GET['id']
-    ]);
-
-    // test of database actie is gelukt
-    $retVal = ($stmt->rowCount() == 1) ? true : false ;
-    return $retVal;
+    $stmt->execute([':id' => $id]);
+    return $stmt->rowCount() == 1;
 }
-
 ?>
